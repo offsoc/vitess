@@ -1458,7 +1458,7 @@ func TestEngineReload(t *testing.T) {
 			require.NoError(t, err)
 
 			se.SkipMetaCheck = false
-			se.lastChange.Store(987654321)
+			se.lastChange = 987654321
 
 			// Initial tables in the schema engine
 			se.tables = map[string]*Table{
@@ -1841,6 +1841,10 @@ func TestGetTableForPos(t *testing.T) {
 	se.historian.enabled = false
 
 	addExpectedReloadQueries := func(db *fakesqldb.DB) {
+		db.AddQuery(mysql.ShowPartitons, &sqltypes.Result{})
+		db.AddQuery(mysql.ShowTableRowCountClusteredIndex, &sqltypes.Result{})
+		db.AddQuery(mysql.ShowIndexSizes, &sqltypes.Result{})
+		db.AddQuery(mysql.ShowIndexCardinalities, &sqltypes.Result{})
 		db.AddQuery("SELECT UNIX_TIMESTAMP()", sqltypes.MakeTestResult(sqltypes.MakeTestFields(
 			"UNIX_TIMESTAMP()",
 			"int64"),
