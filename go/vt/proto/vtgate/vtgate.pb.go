@@ -1338,8 +1338,13 @@ type VStreamFlags struct {
 	StreamKeyspaceHeartbeats bool `protobuf:"varint,7,opt,name=stream_keyspace_heartbeats,json=streamKeyspaceHeartbeats,proto3" json:"stream_keyspace_heartbeats,omitempty"`
 	// Include reshard journal events in the stream.
 	IncludeReshardJournalEvents bool `protobuf:"varint,8,opt,name=include_reshard_journal_events,json=includeReshardJournalEvents,proto3" json:"include_reshard_journal_events,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	// Copy only these tables, skip the rest in the filter.
+	// If not provided, the default behaviour is to copy all tables.
+	TablesToCopy []string `protobuf:"bytes,9,rep,name=tables_to_copy,json=tablesToCopy,proto3" json:"tables_to_copy,omitempty"`
+	// Exclude the keyspace from the table name that is sent to the vstream client
+	ExcludeKeyspaceFromTableName bool `protobuf:"varint,10,opt,name=exclude_keyspace_from_table_name,json=excludeKeyspaceFromTableName,proto3" json:"exclude_keyspace_from_table_name,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
 }
 
 func (x *VStreamFlags) Reset() {
@@ -1424,6 +1429,20 @@ func (x *VStreamFlags) GetStreamKeyspaceHeartbeats() bool {
 func (x *VStreamFlags) GetIncludeReshardJournalEvents() bool {
 	if x != nil {
 		return x.IncludeReshardJournalEvents
+	}
+	return false
+}
+
+func (x *VStreamFlags) GetTablesToCopy() []string {
+	if x != nil {
+		return x.TablesToCopy
+	}
+	return nil
+}
+
+func (x *VStreamFlags) GetExcludeKeyspaceFromTableName() bool {
+	if x != nil {
+		return x.ExcludeKeyspaceFromTableName
 	}
 	return false
 }
@@ -1803,7 +1822,8 @@ type Session_ShardSession struct {
 	TabletAlias   *topodata.TabletAlias  `protobuf:"bytes,3,opt,name=tablet_alias,json=tabletAlias,proto3" json:"tablet_alias,omitempty"`
 	// reserved connection if a dedicated connection is needed
 	ReservedId int64 `protobuf:"varint,4,opt,name=reserved_id,json=reservedId,proto3" json:"reserved_id,omitempty"`
-	VindexOnly bool  `protobuf:"varint,5,opt,name=vindex_only,json=vindexOnly,proto3" json:"vindex_only,omitempty"`
+	// read_only is true if the session has only executed read queries.
+	ReadOnly bool `protobuf:"varint,5,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
 	// rows_affected tracks if any query has modified the rows.
 	RowsAffected  bool `protobuf:"varint,6,opt,name=rows_affected,json=rowsAffected,proto3" json:"rows_affected,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1868,9 +1888,9 @@ func (x *Session_ShardSession) GetReservedId() int64 {
 	return 0
 }
 
-func (x *Session_ShardSession) GetVindexOnly() bool {
+func (x *Session_ShardSession) GetReadOnly() bool {
 	if x != nil {
-		return x.VindexOnly
+		return x.ReadOnly
 	}
 	return false
 }
@@ -1886,7 +1906,7 @@ var File_vtgate_proto protoreflect.FileDescriptor
 
 const file_vtgate_proto_rawDesc = "" +
 	"\n" +
-	"\fvtgate.proto\x12\x06vtgate\x1a\x10binlogdata.proto\x1a\vquery.proto\x1a\x0etopodata.proto\x1a\vvtrpc.proto\"\xd2\x0f\n" +
+	"\fvtgate.proto\x12\x06vtgate\x1a\x10binlogdata.proto\x1a\vquery.proto\x1a\x0etopodata.proto\x1a\vvtrpc.proto\"\xce\x0f\n" +
 	"\aSession\x12%\n" +
 	"\x0ein_transaction\x18\x01 \x01(\bR\rinTransaction\x12C\n" +
 	"\x0eshard_sessions\x18\x02 \x03(\v2\x1c.vtgate.Session.ShardSessionR\rshardSessions\x12\x1e\n" +
@@ -1920,15 +1940,14 @@ const file_vtgate_proto_rawDesc = "" +
 	"\rquery_timeout\x18\x19 \x01(\x03R\fqueryTimeout\x12R\n" +
 	"\x11prepare_statement\x18\x1a \x03(\v2%.vtgate.Session.PrepareStatementEntryR\x10prepareStatement\x12+\n" +
 	"\x11migration_context\x18\x1b \x01(\tR\x10migrationContext\x120\n" +
-	"\x14error_until_rollback\x18\x1c \x01(\bR\x12errorUntilRollback\x1a\xfd\x01\n" +
+	"\x14error_until_rollback\x18\x1c \x01(\bR\x12errorUntilRollback\x1a\xf9\x01\n" +
 	"\fShardSession\x12%\n" +
 	"\x06target\x18\x01 \x01(\v2\r.query.TargetR\x06target\x12%\n" +
 	"\x0etransaction_id\x18\x02 \x01(\x03R\rtransactionId\x128\n" +
 	"\ftablet_alias\x18\x03 \x01(\v2\x15.topodata.TabletAliasR\vtabletAlias\x12\x1f\n" +
 	"\vreserved_id\x18\x04 \x01(\x03R\n" +
-	"reservedId\x12\x1f\n" +
-	"\vvindex_only\x18\x05 \x01(\bR\n" +
-	"vindexOnly\x12#\n" +
+	"reservedId\x12\x1b\n" +
+	"\tread_only\x18\x05 \x01(\bR\breadOnly\x12#\n" +
 	"\rrows_affected\x18\x06 \x01(\bR\frowsAffected\x1a\\\n" +
 	"\x19UserDefinedVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12)\n" +
@@ -1994,7 +2013,7 @@ const file_vtgate_proto_rawDesc = "" +
 	"\x19ResolveTransactionRequest\x12,\n" +
 	"\tcaller_id\x18\x01 \x01(\v2\x0f.vtrpc.CallerIDR\bcallerId\x12\x12\n" +
 	"\x04dtid\x18\x02 \x01(\tR\x04dtid\"\x1c\n" +
-	"\x1aResolveTransactionResponse\"\xef\x02\n" +
+	"\x1aResolveTransactionResponse\"\xdd\x03\n" +
 	"\fVStreamFlags\x12#\n" +
 	"\rminimize_skew\x18\x01 \x01(\bR\fminimizeSkew\x12-\n" +
 	"\x12heartbeat_interval\x18\x02 \x01(\rR\x11heartbeatInterval\x12&\n" +
@@ -2003,7 +2022,10 @@ const file_vtgate_proto_rawDesc = "" +
 	"\x0fcell_preference\x18\x05 \x01(\tR\x0ecellPreference\x12!\n" +
 	"\ftablet_order\x18\x06 \x01(\tR\vtabletOrder\x12<\n" +
 	"\x1astream_keyspace_heartbeats\x18\a \x01(\bR\x18streamKeyspaceHeartbeats\x12C\n" +
-	"\x1einclude_reshard_journal_events\x18\b \x01(\bR\x1bincludeReshardJournalEvents\"\xf6\x01\n" +
+	"\x1einclude_reshard_journal_events\x18\b \x01(\bR\x1bincludeReshardJournalEvents\x12$\n" +
+	"\x0etables_to_copy\x18\t \x03(\tR\ftablesToCopy\x12F\n" +
+	" exclude_keyspace_from_table_name\x18\n" +
+	" \x01(\bR\x1cexcludeKeyspaceFromTableName\"\xf6\x01\n" +
 	"\x0eVStreamRequest\x12,\n" +
 	"\tcaller_id\x18\x01 \x01(\v2\x0f.vtrpc.CallerIDR\bcallerId\x125\n" +
 	"\vtablet_type\x18\x02 \x01(\x0e2\x14.topodata.TabletTypeR\n" +
